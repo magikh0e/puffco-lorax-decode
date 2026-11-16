@@ -63,10 +63,10 @@ python3 puffco_client.py --address AA:BB:CC:DD:EE:FF
 > pair it — use a ConfirmOnly custom pairing (`DeviceInformationCustomPairing`);
 > if it sticks on `OPERATION_ALREADY_IN_PROGRESS`, reboot to clear it.
 
-Reading live state, the auth handshake, and starting a heat cycle are
-**live-verified** on a real Peak Pro (fw gith `5652c02`, bleak 3.1 / Chrome 157).
-The other writes are mapped from the app but not yet hardware-tested — see the
-roadmap below.
+Reading live state, the auth handshake, and starting/stopping a heat cycle (with
+temp/time overrides) are **live-verified** on a real Peak Pro (fw gith `5652c02`,
+bleak 3.1 / Chrome 157). The remaining writes are mapped from the app but not yet
+hardware-tested — see the roadmap below.
 
 ## Protocol, in short
 
@@ -107,17 +107,20 @@ Pro but int32/100 on a Proxy. Detect the variant from `/p/sys/fw/api`
 
 These are the command sequences the official Puffco Connect 3.13.47 app uses,
 recovered by decompiling it. Each step is a `writeShort` (opcode `0x11`) to a
-path. **Start is live-verified on a Peak Pro** (it preheats and `/p/app/htr/temp`
-climbs); the rest are from the app and not yet hardware-tested:
+path. **Start, stop and the temp/time overrides are live-verified on a Peak Pro**
+(start preheats and `/p/app/htr/temp` climbs); power off and lantern are from the
+app and not yet hardware-tested:
 
 ```
-start cycle   /p/app/hcs = <index> (i8)    then   /p/app/mc = 7     [verified]
-stop cycle    /p/app/mc = 8                 then   /p/app/mc = 2     [from app]
-+temp         /p/app/tmpo = <delta degC>    (float32; app steps +5 C) [from app]
-+time         /p/app/timo = <seconds>       (app steps +10 s)        [from app]
-power off     /p/app/ltrn/cmd = 0           then   /p/app/mc = 0     [from app]
-lantern on    /p/app/ltrn/cmd = 1           then   /p/app/ltrn/time = 7200 [from app]
+start cycle   /p/app/hcs = <index> (i8)    then   /p/app/mc = 7      [verified]
+stop cycle    /p/app/mc = 8                 then   /p/app/mc = 2      [verified]
++temp         /p/app/tmpo = <delta C> float32  (+10 F = 5.5556)      [verified]
++time         /p/app/timo = <seconds> float32  (e.g. 10.0)           [verified]
+power off     /p/app/ltrn/cmd = 0           then   /p/app/mc = 0      [from app]
+lantern on    /p/app/ltrn/cmd = 1           then   /p/app/ltrn/time = 7200  [from app]
 ```
+
+The temp/time overrides apply during an active heat cycle.
 
 `/p/app/mc` is the mode command (`7` start, `8` abort, `2` idle, `0` off; the app
 never sends `9`/boost). LED colors (`/p/app/led/*`) are 8 bytes:
@@ -151,8 +154,8 @@ these devices, so the only way to talk to a Puffco you own on your own terms is
 to work out the protocol from the wire. This repo *reads* — it turns a capture
 into a documented path map — and it's the protocol reference behind a separate
 control webapp that now **pairs with a real Peak Pro, authenticates, reads live
-state, and starts a heat cycle**: a small, dependency-light alternative to the
-official app. I did the same
+state, and starts/stops a heat cycle with temp/time overrides**: a small,
+dependency-light alternative to the official app. I did the same
 reverse-engineering route for Storz & Bickel (see
 [volcano-hybrid-control](https://github.com/magikh0e/volcano-hybrid-control) and
 [home-assistant-volcano-hybrid](https://github.com/magikh0e/home-assistant-volcano-hybrid));
@@ -167,14 +170,13 @@ What's mapped so far:
   unlocks it, status 0; `getLimits` → maxPayload 241, maxFiles 36, maxCommands 8).
 - A chunk of the `/p` and `/u` path tree with types (battery, heater, odometer,
   profiles, lantern, LEDs, device info); the float32 reads are live-verified.
-- **Starting a heat cycle** is live-verified on a Peak Pro; the other control
-  sequences are mapped from the app — see above.
+- **Start/stop a heat cycle and the temp/time overrides** are live-verified on a
+  Peak Pro; the lantern/power-off sequences are mapped from the app — see above.
 
 Still open, and where help is useful:
 
-- The remaining writes — stop (`mc` 8 then 2), the `tmpo`/`timo` temp/time
-  overrides, lantern, stealth, ready-mode — are mapped from the app but not yet
-  round-tripped on hardware.
+- The remaining writes — lantern, profile edits, stealth, ready-mode, brightness
+  — are mapped from the app but not yet round-tripped on hardware.
 - The event channel (`43312cd1-…`): the app subscribes with `fileWatch` (`0x23`)
   and acks with `ackEvents` (`0x03`), but the event *payloads* aren't decoded.
 - Proxy (*Toad*) support: the same paths reported as int32-with-scale, not float32.
