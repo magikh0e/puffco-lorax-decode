@@ -1,3 +1,10 @@
+<p align="center">
+  <img src="assets/logo.png" width="320"
+       alt="Badge: a weathered metal medallion reading PUFFCO LORAX over
+            DECODE TOOL, with a glowing Bluetooth padlock, a Puffco device,
+            and a laptop receiving a stream of bits, on a circuit-board field.">
+</p>
+
 # puffco-lorax-decode
 
 A small Python decoder for Puffco **LORAX** BLE traffic. Feed it an Android
