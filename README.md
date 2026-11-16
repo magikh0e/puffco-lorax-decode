@@ -78,9 +78,13 @@ the script maps the ones I've identified.
 
 ## Credit
 
-The protocol was confirmed against my own captures plus the prior work in
-[austenstone/puffco-mcp](https://github.com/austenstone/puffco-mcp) and
-Fr0st3h's write-up. The GATT UUIDs and the auth scheme line up with those.
+The protocol was confirmed against my own captures plus prior work. The LORAX
+UUIDs and the path model match
+[austenstone/puffco-mcp](https://github.com/austenstone/puffco-mcp).
+[Fr0st3h's write-up](https://github.com/Fr0st3h/Puffco-Reverse-Engineering-Writeup)
+documents the *older* one-characteristic-per-field firmware — a different GATT
+layout and a different handshake constant — but the same
+`SHA-256(secret ++ seed)[:16]` auth scheme carried over to LORAX.
 
 ## Status / work in progress
 
@@ -110,6 +114,13 @@ Still open, and where help is useful:
 - Whether paths/opcodes drift across firmware versions.
 - Nailing down the control surface enough to safely *write* (set temp, trigger a
   cycle) rather than only read.
+
+A useful lead for those write opcodes:
+[Fr0st3h's write-up](https://github.com/Fr0st3h/Puffco-Reverse-Engineering-Writeup)
+lists the older firmware's command set (heatCycleStart, heatCycleAbort, bonding,
+lighting modes). It's a different generation and a different wire format, but the
+device *behaviours* are the same — so it's a decent map of **which commands exist**
+to match against the LORAX writes when decoding them.
 
 If you've captured something new, or decoded a path the registry doesn't know,
 **[Discussions](https://github.com/magikh0e/puffco-lorax-decode/discussions)** is
