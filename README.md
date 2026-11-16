@@ -195,10 +195,21 @@ If you've captured something new, or decoded a path the registry doesn't know,
 the place — there's a form for findings. This is exploratory and done on my own
 devices; nothing here is affiliated with or endorsed by Puffco.
 
-## Use it on your own device
+## Legality
 
-This is for understanding and interoperating with a Puffco you own. Don't use it
-against devices that aren't yours.
+I reverse-engineered this from a device I own, using my own captures, so my own
+software can talk to it. In the U.S. that's the interoperability case the DMCA
+carves out — **§1201(f)**
+([17 USC §1201](https://www.law.cornell.edu/uscode/text/17/1201)): if you
+lawfully have a copy of a program, you may circumvent its access controls and
+reverse-engineer it for the sole purpose of making an independently created
+program interoperate with it, where interoperability is just programs exchanging
+information and using it (§1201(f)(4)). An unofficial client for a device with no
+public API is exactly that.
+
+This repo documents a wire protocol — it doesn't redistribute Puffco's app or
+firmware. Use it on hardware you own; don't point it at devices that aren't
+yours. None of this is legal advice.
 
 ## License
 
