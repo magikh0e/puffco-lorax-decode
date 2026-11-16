@@ -164,7 +164,10 @@ to work out the protocol from the wire. This repo *reads* — it turns a capture
 into a documented path map — and it's the protocol reference behind a separate
 control webapp that now **pairs with a real Peak Pro, authenticates, reads live
 state, starts/stops a heat cycle with temp/time overrides, and runs the mood
-light**: a small, dependency-light alternative to the official app. I did the same
+light**: a small, dependency-light alternative to the official app —
+**[puffco-peak-control](https://github.com/magikh0e/puffco-peak-control)**, live at
+[magikh0e.github.io/puffco-peak-control](https://magikh0e.github.io/puffco-peak-control/)
+(with a `?demo` mode that needs no device). I did the same
 reverse-engineering route for Storz & Bickel (see
 [volcano-hybrid-control](https://github.com/magikh0e/volcano-hybrid-control) and
 [home-assistant-volcano-hybrid](https://github.com/magikh0e/home-assistant-volcano-hybrid));
