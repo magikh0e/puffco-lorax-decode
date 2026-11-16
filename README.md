@@ -57,6 +57,40 @@ The protocol was confirmed against my own captures plus the prior work in
 [austenstone/puffco-mcp](https://github.com/austenstone/puffco-mcp) and
 Fr0st3h's write-up. The GATT UUIDs and the auth scheme line up with those.
 
+## Status / work in progress
+
+This decoder is step one of a bigger itch: there's no official public API for
+these devices, so the only way to talk to a Puffco you own on your own terms is
+to work out the protocol from the wire. Right now this repo *reads* — it turns a
+capture into a documented path map. The direction I'm poking at is turning that
+understanding into something you can actually *drive* a device with: a small,
+dependency-light integration or app that isn't the official one. I did the same
+reverse-engineering route for Storz & Bickel (see
+[volcano-hybrid-control](https://github.com/magikh0e/volcano-hybrid-control) and
+[home-assistant-volcano-hybrid](https://github.com/magikh0e/home-assistant-volcano-hybrid));
+this is the early, exploratory version of that for LORAX.
+
+What's mapped so far:
+
+- The frame format, the command/reply/event channels, and the main opcodes.
+- The New Proxy auth handshake, confirmed against a real capture.
+- A chunk of the `/p` and `/u` path tree with types (battery, heater, odometer,
+  profiles, lantern, LEDs, device info).
+
+Still open, and where help is useful:
+
+- More of the path tree, and which paths are writable vs read-only.
+- The larger write opcodes (`0x20` / `0x22` / `0x23`) and their payload shapes.
+- The event channel (`43312cd1-…`): what the device pushes unprompted.
+- Whether paths/opcodes drift across firmware versions.
+- Nailing down the control surface enough to safely *write* (set temp, trigger a
+  cycle) rather than only read.
+
+If you've captured something new, or decoded a path the registry doesn't know,
+**[Discussions](https://github.com/magikh0e/puffco-lorax-decode/discussions)** is
+the place — there's a form for findings. This is exploratory and done on my own
+devices; nothing here is affiliated with or endorsed by Puffco.
+
 ## Use it on your own device
 
 This is for understanding and interoperating with a Puffco you own. Don't use it

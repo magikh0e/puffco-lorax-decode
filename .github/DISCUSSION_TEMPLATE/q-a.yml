@@ -1,0 +1,41 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions about the LORAX protocol or the decoder. Saying which device and firmware you're on, and pasting the relevant decoded lines, gets a faster answer.
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Peak Pro
+        - Peak Pro (New Proxy firmware)
+        - Peak (original)
+        - Proxy
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version / git hash
+      description: From the app, or the /p/sys/fw/gith path the decoder prints.
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Decoder output or capture details
+      description: Paste the relevant lines. Don't attach a raw btsnoop that contains anything personal.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before posting
+      options:
+        - label: This is about a device I own
+          required: true

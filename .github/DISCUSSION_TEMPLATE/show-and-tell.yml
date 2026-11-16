@@ -1,0 +1,30 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a new path, opcode, or value format? Decoded something the registry doesn't know yet? Post it here so it can go into the map.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What did you find?
+      options:
+        - A new path and its type
+        - A new opcode
+        - A correction to an existing path/type
+        - A whole subsystem (profiles, lantern, etc.)
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: finding
+    attributes:
+      label: The finding
+      description: The path/opcode, the bytes you saw, and how you worked out the type or meaning.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware it's from
+      description: Paths and opcodes can change between firmware versions.
