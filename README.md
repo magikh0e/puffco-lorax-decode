@@ -166,7 +166,7 @@ control webapp that now **pairs with a real Peak Pro, authenticates, reads live
 state, starts/stops a heat cycle with temp/time overrides, and runs the mood
 light**: a small, dependency-light alternative to the official app —
 **[puffco-peak-control](https://github.com/magikh0e/puffco-peak-control)**, live at
-[magikh0e.github.io/puffco-peak-control](https://magikh0e.github.io/puffco-peak-control/)
+[puffco.magikh0e.com](https://puffco.magikh0e.com/)
 (with a `?demo` mode that needs no device). I did the same
 reverse-engineering route for Storz & Bickel (see
 [volcano-hybrid-control](https://github.com/magikh0e/volcano-hybrid-control) and
