@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.log
+btsnoop_hci.log
+out.json
+out.csv
+*.json
+*.csv
+!example*.json
+!example*.csv
+.DS_Store
