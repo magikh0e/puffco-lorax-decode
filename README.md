@@ -63,10 +63,10 @@ python3 puffco_client.py --address AA:BB:CC:DD:EE:FF
 > pair it — use a ConfirmOnly custom pairing (`DeviceInformationCustomPairing`);
 > if it sticks on `OPERATION_ALREADY_IN_PROGRESS`, reboot to clear it.
 
-Reading live state, the auth handshake, and starting/stopping a heat cycle (with
-temp/time overrides) are **live-verified** on a real Peak Pro (fw gith `5652c02`,
-bleak 3.1 / Chrome 157). The remaining writes are mapped from the app but not yet
-hardware-tested — see the roadmap below.
+Reading live state, the auth handshake, starting/stopping a heat cycle (with
+temp/time overrides), and the mood light are **live-verified** on a real Peak Pro
+(fw gith `5652c02`, bleak 3.1 / Chrome 157). The remaining writes are mapped from
+the app but not yet hardware-tested — see the roadmap below.
 
 ## Protocol, in short
 
@@ -107,27 +107,29 @@ Pro but int32/100 on a Proxy. Detect the variant from `/p/sys/fw/api`
 
 These are the command sequences the official Puffco Connect 3.13.47 app uses,
 recovered by decompiling it. Each step is a `writeShort` (opcode `0x11`) to a
-path. **Start, stop and the temp/time overrides are live-verified on a Peak Pro**
-(start preheats and `/p/app/htr/temp` climbs); power off and lantern are from the
-app and not yet hardware-tested:
+path. **Start, stop, the temp/time overrides, and the mood light (lantern on and
+off) are live-verified on a Peak Pro** (start preheats and `/p/app/htr/temp`
+climbs); device power off is from the app and not yet hardware-tested:
 
 ```
 start cycle   /p/app/hcs = <index> (i8)    then   /p/app/mc = 7      [verified]
 stop cycle    /p/app/mc = 8                 then   /p/app/mc = 2      [verified]
 +temp         /p/app/tmpo = <delta C> float32  (+10 F = 5.5556)      [verified]
 +time         /p/app/timo = <seconds> float32  (e.g. 10.0)           [verified]
+lantern on    /p/app/ltrn/colr = <color>  then  ltrn/cmd = 1  then  ltrn/time = 7200  [verified]
+lantern off   /p/app/ltrn/cmd = 0                                            [verified]
 power off     /p/app/ltrn/cmd = 0           then   /p/app/mc = 0      [from app]
-lantern on    /p/app/ltrn/cmd = 1           then   /p/app/ltrn/time = 7200  [from app]
 ```
 
 The temp/time overrides apply during an active heat cycle.
 
 `/p/app/mc` is the mode command (`7` start, `8` abort, `2` idle, `0` off; the app
-never sends `9`/boost). LED colors (`/p/app/led/*`) are 8 bytes:
-`r, g, b, 0, lumaAnim, 0, 0, 0`, where byte 3 is `1` for an animation table or
-`255` for none, and `lumaAnim` is PRESERVE 0 / STEADY 1 / BREATHING 5 / RISING 6 /
-CIRCLING 7. Every write carries `flags = truncate (0x04)` at `offset 0` — that's
-the `bp=4` the decoder reports.
+never sends `9`/boost). LED/lantern colors (`/p/app/led/*`, `/p/app/ltrn/colr`)
+are 8 bytes: `r, g, b, 0, lumaAnim, 0, 0, 0`, where byte 3 selects the source —
+`0` a plain RGB color (hardware-confirmed for the lantern), `1` an animation
+table, `255` none — and `lumaAnim` is PRESERVE 0 / STEADY 1 / BREATHING 5 /
+RISING 6 / CIRCLING 7. Every write carries `flags = truncate (0x04)` at
+`offset 0` — that's the `bp=4` the decoder reports.
 
 ## Credit
 
@@ -154,8 +156,8 @@ these devices, so the only way to talk to a Puffco you own on your own terms is
 to work out the protocol from the wire. This repo *reads* — it turns a capture
 into a documented path map — and it's the protocol reference behind a separate
 control webapp that now **pairs with a real Peak Pro, authenticates, reads live
-state, and starts/stops a heat cycle with temp/time overrides**: a small,
-dependency-light alternative to the official app. I did the same
+state, starts/stops a heat cycle with temp/time overrides, and runs the mood
+light**: a small, dependency-light alternative to the official app. I did the same
 reverse-engineering route for Storz & Bickel (see
 [volcano-hybrid-control](https://github.com/magikh0e/volcano-hybrid-control) and
 [home-assistant-volcano-hybrid](https://github.com/magikh0e/home-assistant-volcano-hybrid));
@@ -170,13 +172,15 @@ What's mapped so far:
   unlocks it, status 0; `getLimits` → maxPayload 241, maxFiles 36, maxCommands 8).
 - A chunk of the `/p` and `/u` path tree with types (battery, heater, odometer,
   profiles, lantern, LEDs, device info); the float32 reads are live-verified.
-- **Start/stop a heat cycle and the temp/time overrides** are live-verified on a
-  Peak Pro; the lantern/power-off sequences are mapped from the app — see above.
+- **Start/stop a heat cycle, the temp/time overrides, and the mood light (lantern
+  on/off)** are live-verified on a Peak Pro; device power off and the rest are
+  mapped from the app — see above.
 
 Still open, and where help is useful:
 
-- The remaining writes — lantern, profile edits, stealth, ready-mode, brightness
-  — are mapped from the app but not yet round-tripped on hardware.
+- The remaining writes — profile edits, stealth, ready-mode, brightness, and
+  device power off (`ltrn/cmd` 0 then `mc` 0) — are mapped from the app but not
+  yet round-tripped on hardware.
 - The event channel (`43312cd1-…`): the app subscribes with `fileWatch` (`0x23`)
   and acks with `ackEvents` (`0x03`), but the event *payloads* aren't decoded.
 - Proxy (*Toad*) support: the same paths reported as int32-with-scale, not float32.
