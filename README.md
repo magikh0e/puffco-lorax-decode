@@ -18,6 +18,13 @@ decoder from my write-up on reverse-engineering it:
 where the whole method (capture, decode, read the app for the auth secret) is
 walked through end to end.
 
+**Full reference → the [project wiki](https://github.com/magikh0e/puffco-lorax-decode/wiki):**
+the [protocol](https://github.com/magikh0e/puffco-lorax-decode/wiki/Protocol-Reference)
+(frame format, opcode set, auth handshake), the complete device
+[path map](https://github.com/magikh0e/puffco-lorax-decode/wiki/Path-Map), and the
+[control sequences](https://github.com/magikh0e/puffco-lorax-decode/wiki/Driving-the-Device)
+— in more depth than this README.
+
 ## Usage
 
 ```bash
