@@ -40,6 +40,24 @@ want the auth handshake in it.
   decoded as float32 / u32 / string / rgb / mac / bytes, plus a short
   description. `--json` / `--csv` write the same table to a file.
 
+## Live client: `puffco_client.py`
+
+The decoder works offline, from a capture. The companion client goes the other
+way round: it connects to a Puffco over BLE, runs the LORAX auth handshake, and
+reads live device state (battery, heater temp, serial, profiles, and so on) using
+the same seqId transaction model. Cross-platform via
+[`bleak`](https://github.com/hbldh/bleak).
+
+```bash
+pip install bleak
+python3 puffco_client.py                      # auto-scan for a Puffco
+python3 puffco_client.py --name "PEAK PRO"
+python3 puffco_client.py --address AA:BB:CC:DD:EE:FF
+```
+
+It reads today; *writing* (set temp, start a cycle) is the next step — see the
+roadmap below.
+
 ## Protocol, in short
 
 ```
