@@ -55,7 +55,17 @@ python3 puffco_client.py --name "PEAK PRO"
 python3 puffco_client.py --address AA:BB:CC:DD:EE:FF
 ```
 
-It reads today; *writing* (set temp, start a cycle) is the next step — see the
+> **Pairing is required.** The Peak Pro only answers over a **paired, encrypted**
+> link — unpaired, it silently ignores every LORAX frame and the client just
+> hangs on timeouts (reading the OTA version char returns ATT `0x0F` "Insufficient
+> Encryption"). Put the Peak in pairing mode (hold the button until the logo glows
+> blue) and pair it with your OS first. On Windows, Settings/Chrome often won't
+> pair it — use a ConfirmOnly custom pairing (`DeviceInformationCustomPairing`);
+> if it sticks on `OPERATION_ALREADY_IN_PROGRESS`, reboot to clear it.
+
+Reading live state, the auth handshake, and starting a heat cycle are
+**live-verified** on a real Peak Pro (fw gith `5652c02`, bleak 3.1 / Chrome 157).
+The other writes are mapped from the app but not yet hardware-tested — see the
 roadmap below.
 
 ## Protocol, in short
@@ -96,16 +106,17 @@ Pro but int32/100 on a Proxy. Detect the variant from `/p/sys/fw/api`
 ## Driving the device
 
 These are the command sequences the official Puffco Connect 3.13.47 app uses,
-recovered by decompiling it — so this is what the shipping app does on a real
-device. Each step is a `writeShort` (opcode `0x11`) to a path:
+recovered by decompiling it. Each step is a `writeShort` (opcode `0x11`) to a
+path. **Start is live-verified on a Peak Pro** (it preheats and `/p/app/htr/temp`
+climbs); the rest are from the app and not yet hardware-tested:
 
 ```
-start cycle   /p/app/hcs = <index> (i8)    then   /p/app/mc = 7
-stop cycle    /p/app/mc = 8                 then   /p/app/mc = 2
-+temp         /p/app/tmpo = <delta degC>    (float32; app steps +5 C)
-+time         /p/app/timo = <seconds>       (app steps +10 s)
-power off     /p/app/ltrn/cmd = 0           then   /p/app/mc = 0
-lantern on    /p/app/ltrn/cmd = 1           then   /p/app/ltrn/time = 7200
+start cycle   /p/app/hcs = <index> (i8)    then   /p/app/mc = 7     [verified]
+stop cycle    /p/app/mc = 8                 then   /p/app/mc = 2     [from app]
++temp         /p/app/tmpo = <delta degC>    (float32; app steps +5 C) [from app]
++time         /p/app/timo = <seconds>       (app steps +10 s)        [from app]
+power off     /p/app/ltrn/cmd = 0           then   /p/app/mc = 0     [from app]
+lantern on    /p/app/ltrn/cmd = 1           then   /p/app/ltrn/time = 7200 [from app]
 ```
 
 `/p/app/mc` is the mode command (`7` start, `8` abort, `2` idle, `0` off; the app
@@ -137,10 +148,11 @@ uses. That app carries three handshake keys, one per firmware generation: `flatA
 
 This decoder is step one of a bigger itch: there's no official public API for
 these devices, so the only way to talk to a Puffco you own on your own terms is
-to work out the protocol from the wire. Right now this repo *reads* — it turns a
-capture into a documented path map. The direction I'm poking at is turning that
-understanding into something you can actually *drive* a device with: a small,
-dependency-light integration or app that isn't the official one. I did the same
+to work out the protocol from the wire. This repo *reads* — it turns a capture
+into a documented path map — and it's the protocol reference behind a separate
+control webapp that now **pairs with a real Peak Pro, authenticates, reads live
+state, and starts a heat cycle**: a small, dependency-light alternative to the
+official app. I did the same
 reverse-engineering route for Storz & Bickel (see
 [volcano-hybrid-control](https://github.com/magikh0e/volcano-hybrid-control) and
 [home-assistant-volcano-hybrid](https://github.com/magikh0e/home-assistant-volcano-hybrid));
@@ -151,14 +163,18 @@ What's mapped so far:
 - The frame format, the command/reply/event channels, and the **full opcode set**
   — LORAX is a file-access protocol (open/read/write/watch/stat/close), with
   `readShort`/`writeShort` as the shorthand ops.
-- The New Proxy auth handshake, confirmed against a real capture.
+- The auth handshake — **live-verified on a real Peak Pro** (the `lorax` key
+  unlocks it, status 0; `getLimits` → maxPayload 241, maxFiles 36, maxCommands 8).
 - A chunk of the `/p` and `/u` path tree with types (battery, heater, odometer,
-  profiles, lantern, LEDs, device info).
-- The control sequences the app uses to drive the device (set temp, start / stop
-  a cycle, lantern, power off) — see above, from the decompiled official app.
+  profiles, lantern, LEDs, device info); the float32 reads are live-verified.
+- **Starting a heat cycle** is live-verified on a Peak Pro; the other control
+  sequences are mapped from the app — see above.
 
 Still open, and where help is useful:
 
+- The remaining writes — stop (`mc` 8 then 2), the `tmpo`/`timo` temp/time
+  overrides, lantern, stealth, ready-mode — are mapped from the app but not yet
+  round-tripped on hardware.
 - The event channel (`43312cd1-…`): the app subscribes with `fileWatch` (`0x23`)
   and acks with `ackEvents` (`0x03`), but the event *payloads* aren't decoded.
 - Proxy (*Toad*) support: the same paths reported as int32-with-scale, not float32.

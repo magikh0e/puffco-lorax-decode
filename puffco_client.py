@@ -10,7 +10,16 @@ seqId transaction model. Pure-Python, cross-platform via `bleak`.
     python3 puffco_client.py --name "PEAK PRO"
     python3 puffco_client.py --address AA:BB:CC:DD:EE:FF
 
-Protocol (verified against real captures + austenstone/puffco-mcp):
+REQUIRED: the BLE link must be PAIRED and ENCRYPTED first, or the Peak Pro
+silently ignores every LORAX frame and this client just hangs on timeouts (no
+replies at all). Put the Peak in pairing mode (hold the button until the logo
+glows blue), then pair it with your OS:
+  * Linux / macOS: the OS Bluetooth settings, or bluetoothctl.
+  * Windows: Settings / Chrome often will NOT pair it -- use a ConfirmOnly
+    custom pairing (DeviceInformationCustomPairing, auto-accept). If pairing
+    sticks on OPERATION_ALREADY_IN_PROGRESS, a reboot clears it.
+
+Protocol (live-verified on a Peak Pro, fw gith 5652c02, bleak 3.1):
   frame  = seqId(u16 LE) + opcode(u8) + payload
   reply  = seqId(u16 LE) + errByte(u8) + data      (on the REPLY notify char)
   auth   = getAccessSeed -> token = SHA256(HANDSHAKE2 ++ seed)[:16] -> unlock
