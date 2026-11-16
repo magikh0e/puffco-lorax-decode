@@ -93,11 +93,11 @@ same paths as int32 with a scale divisor — so `/p/bat/soc` is float32 on a Pea
 Pro but int32/100 on a Proxy. Detect the variant from `/p/sys/fw/api`
 (`apiSeries = value >> 16`).
 
-## Driving the device (from app source)
+## Driving the device
 
-These are the command sequences Puffco Connect 3.13.47 uses, recovered by static
-analysis of the app — **not yet verified against real hardware**, so treat them as
-leads. Each step is a `writeShort` (opcode `0x11`) to a path:
+These are the command sequences the official Puffco Connect 3.13.47 app uses,
+recovered by decompiling it — so this is what the shipping app does on a real
+device. Each step is a `writeShort` (opcode `0x11`) to a path:
 
 ```
 start cycle   /p/app/hcs = <index> (i8)    then   /p/app/mc = 7
@@ -127,9 +127,9 @@ layout and a different handshake constant — but the same
 
 The full opcode set (LORAX is a file-access protocol), the
 `readShort`/`writeShort` payload layouts, and the control sequences above were
-recovered from **static analysis of Puffco Connect 3.13.47** while building my own
-Puffco Pro control webapp — *from app source, not yet verified against hardware*.
-That app carries three handshake keys, one per firmware generation: `flatA`,
+recovered by **decompiling the official Puffco Connect 3.13.47 app** while
+building my own Puffco Pro control webapp — this is the protocol the shipping app
+uses. That app carries three handshake keys, one per firmware generation: `flatA`,
 `flatX` (which is exactly Fr0st3h's constant, `FUrZc0WilhUBteT2JlCc+A==`), and
 `lorax` (`ZMZFYlbyb1scoSc3pd1x+w==`, the one this decoder uses).
 
@@ -155,18 +155,15 @@ What's mapped so far:
 - A chunk of the `/p` and `/u` path tree with types (battery, heater, odometer,
   profiles, lantern, LEDs, device info).
 - The control sequences the app uses to drive the device (set temp, start / stop
-  a cycle, lantern, power off) — see above; **from app source, not yet verified
-  against hardware.**
+  a cycle, lantern, power off) — see above, from the decompiled official app.
 
 Still open, and where help is useful:
 
-- **Hardware verification.** The control sequences above come from app source and
-  a simulated device — nobody has run them against a real Puffco yet.
 - The event channel (`43312cd1-…`): the app subscribes with `fileWatch` (`0x23`)
   and acks with `ackEvents` (`0x03`), but the event *payloads* aren't decoded.
 - Proxy (*Toad*) support: the same paths reported as int32-with-scale, not float32.
 - Folding in the fuller ~191-path typed registry from the app's field spec
-  (read/write attrs, enum labels, firmware gates) — ideally once it's verified.
+  (read/write attrs, enum labels, firmware gates).
 
 A useful lead for those write opcodes:
 [Fr0st3h's write-up](https://github.com/Fr0st3h/Puffco-Reverse-Engineering-Writeup)

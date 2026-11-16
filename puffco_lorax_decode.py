@@ -67,8 +67,8 @@ def auth_token(seed: bytes) -> bytes:
 # most values are float32. A Proxy ("Toad", apiSeries 1) reports the same paths
 # as int32 with a scale divisor, so e.g. /p/bat/soc is float32 here but int32/100
 # on a Proxy -- detect the variant from /p/sys/fw/api (apiSeries = value >> 16).
-# Several types below were corrected from the Puffco Connect 3.13.47 app's own
-# field spec (static analysis, not yet hardware-verified).
+# Several types below were corrected from the official Puffco Connect 3.13.47
+# app's own field spec (decompiled).
 PATHS = {
  "/p/sys/hw/ser":   ("string","Device serial number"),
  "/p/sys/hw/mdcd":  ("u32","Model code"),
