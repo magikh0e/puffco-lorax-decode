@@ -87,6 +87,34 @@ Device state is addressed as filesystem-like paths (`/p/bat/soc`,
 `/p/app/htr/temp`, …); the type registry in the script maps the ones I've
 identified.
 
+The registry here is the **Peak Pro** (codename *Pikachoid*, apiSeries 0) table,
+where values are mostly float32. A **Proxy** (*Toad*, apiSeries 1) reports the
+same paths as int32 with a scale divisor — so `/p/bat/soc` is float32 on a Peak
+Pro but int32/100 on a Proxy. Detect the variant from `/p/sys/fw/api`
+(`apiSeries = value >> 16`).
+
+## Driving the device (from app source)
+
+These are the command sequences Puffco Connect 3.13.47 uses, recovered by static
+analysis of the app — **not yet verified against real hardware**, so treat them as
+leads. Each step is a `writeShort` (opcode `0x11`) to a path:
+
+```
+start cycle   /p/app/hcs = <index> (i8)    then   /p/app/mc = 7
+stop cycle    /p/app/mc = 8                 then   /p/app/mc = 2
++temp         /p/app/tmpo = <delta degC>    (float32; app steps +5 C)
++time         /p/app/timo = <seconds>       (app steps +10 s)
+power off     /p/app/ltrn/cmd = 0           then   /p/app/mc = 0
+lantern on    /p/app/ltrn/cmd = 1           then   /p/app/ltrn/time = 7200
+```
+
+`/p/app/mc` is the mode command (`7` start, `8` abort, `2` idle, `0` off; the app
+never sends `9`/boost). LED colors (`/p/app/led/*`) are 8 bytes:
+`r, g, b, 0, lumaAnim, 0, 0, 0`, where byte 3 is `1` for an animation table or
+`255` for none, and `lumaAnim` is PRESERVE 0 / STEADY 1 / BREATHING 5 / RISING 6 /
+CIRCLING 7. Every write carries `flags = truncate (0x04)` at `offset 0` — that's
+the `bp=4` the decoder reports.
+
 ## Credit
 
 The protocol was confirmed against my own captures plus prior work. The LORAX
@@ -97,9 +125,13 @@ documents the *older* one-characteristic-per-field firmware — a different GATT
 layout and a different handshake constant — but the same
 `SHA-256(secret ++ seed)[:16]` auth scheme carried over to LORAX.
 
-The full opcode set (LORAX is a file-access protocol) and the
-`readShort`/`writeShort` payload layouts were recovered from Puffco Connect
-3.13.47 while building my own Puffco Pro control webapp, and folded back in here.
+The full opcode set (LORAX is a file-access protocol), the
+`readShort`/`writeShort` payload layouts, and the control sequences above were
+recovered from **static analysis of Puffco Connect 3.13.47** while building my own
+Puffco Pro control webapp — *from app source, not yet verified against hardware*.
+That app carries three handshake keys, one per firmware generation: `flatA`,
+`flatX` (which is exactly Fr0st3h's constant, `FUrZc0WilhUBteT2JlCc+A==`), and
+`lorax` (`ZMZFYlbyb1scoSc3pd1x+w==`, the one this decoder uses).
 
 ## Status / work in progress
 
@@ -122,17 +154,19 @@ What's mapped so far:
 - The New Proxy auth handshake, confirmed against a real capture.
 - A chunk of the `/p` and `/u` path tree with types (battery, heater, odometer,
   profiles, lantern, LEDs, device info).
+- The control sequences the app uses to drive the device (set temp, start / stop
+  a cycle, lantern, power off) — see above; **from app source, not yet verified
+  against hardware.**
 
 Still open, and where help is useful:
 
-- More of the path tree, and which paths are writable vs read-only.
-- Which **writeShort** paths and values actually drive the device (set temp,
-  start / abort a heat cycle) — the opcode and framing are known; the control
-  *paths* are the remaining piece.
-- The event channel (`43312cd1-…`): what the device pushes unprompted.
-- Whether paths/opcodes drift across firmware versions.
-- Nailing down the control surface enough to safely *write* (set temp, trigger a
-  cycle) rather than only read.
+- **Hardware verification.** The control sequences above come from app source and
+  a simulated device — nobody has run them against a real Puffco yet.
+- The event channel (`43312cd1-…`): the app subscribes with `fileWatch` (`0x23`)
+  and acks with `ackEvents` (`0x03`), but the event *payloads* aren't decoded.
+- Proxy (*Toad*) support: the same paths reported as int32-with-scale, not float32.
+- Folding in the fuller ~191-path typed registry from the app's field spec
+  (read/write attrs, enum labels, firmware gates) — ideally once it's verified.
 
 A useful lead for those write opcodes:
 [Fr0st3h's write-up](https://github.com/Fr0st3h/Puffco-Reverse-Engineering-Writeup)

@@ -60,8 +60,15 @@ def auth_token(seed: bytes) -> bytes:
 
 
 # --- Path type registry -------------------------------------------------
-# type: one of float32 | u16 | u32 | u8 | bool | string | rgb | mac | bytes
+# type: one of float32 | u16 | u32 | u8 | i8 | bool | string | rgb | mac | bytes
 # temps are stored as float32 CELSIUS on the wire.
+#
+# This registry is the Peak Pro (codename "Pikachoid", apiSeries 0) table, where
+# most values are float32. A Proxy ("Toad", apiSeries 1) reports the same paths
+# as int32 with a scale divisor, so e.g. /p/bat/soc is float32 here but int32/100
+# on a Proxy -- detect the variant from /p/sys/fw/api (apiSeries = value >> 16).
+# Several types below were corrected from the Puffco Connect 3.13.47 app's own
+# field spec (static analysis, not yet hardware-verified).
 PATHS = {
  "/p/sys/hw/ser":   ("string","Device serial number"),
  "/p/sys/hw/mdcd":  ("u32","Model code"),
@@ -82,8 +89,8 @@ PATHS = {
  "/p/htr/chmt":     ("u8","Chamber present/type"),
  "/p/htr/chdt":     ("bytes","Chamber detect data"),
  "/p/htr/tcmd":     ("float32","Heater temp command (C)"),
- "/p/app/mc":       ("float32","Mode command (write to control device)"),
- "/p/app/hcs":      ("bytes","Heat-cycle state"),
+ "/p/app/mc":       ("u8","Mode command (write to control device)"),
+ "/p/app/hcs":      ("i8","Heat-cycle state (-1=temp cycle, 0..3)"),
  "/p/app/stat/id":  ("u8","Operating state id"),
  "/p/app/stat/elap":("float32","State elapsed time (s)"),
  "/p/app/stat/tott":("float32","State total time (s)"),
@@ -91,14 +98,14 @@ PATHS = {
  "/p/app/odom/0/tm":("float32","Odometer: total heat time (s)"),
  "/p/app/info/dpd": ("float32","Dabs per day"),
  "/p/app/info/drem":("float32","Approx dabs remaining"),
- "/p/app/ltrn/remt":("bytes","Lantern remote state"),
+ "/p/app/ltrn/remt":("float32","Lantern remaining time (s)"),
  "/p/app/ltrn/colr":("rgb","Lantern color"),
  "/p/app/ltrn/scpd":("bytes","Lantern scene/pattern data"),
  "/p/app/led/pclr": ("rgb","Primary LED color"),
- "/u/app/ui/lbrt":  ("float32","LED brightness"),
+ "/u/app/ui/lbrt":  ("bytes","LED brightness (4x uint8)"),
  "/u/app/ui/stlm":  ("u8","Stealth mode"),
  "/u/app/rdym/hc":  ("float32","Ready-mode heat cycle (-1=off)"),
- "/u/app/lbws":     ("bytes","Lantern boot/wake setting"),
+ "/u/app/lbws":     ("float32","Low-battery warning SOC (%)"),
 }
 # per-profile leaf types  /u/app/hc/<n>/<leaf> and /p/app/thc/<leaf>
 PROFILE_LEAF = {"name":"string","temp":"float32","time":"float32",
@@ -132,6 +139,7 @@ def decode_value(path, v):
         if t=="float32" and len(v)>=4: return t, round(struct.unpack("<f",v[:4])[0],3)
         if t=="u32" and len(v)>=4:     return t, struct.unpack("<I",v[:4])[0]
         if t=="u16" and len(v)>=2:     return t, struct.unpack("<H",v[:2])[0]
+        if t=="i8" and len(v)>=1:      return t, struct.unpack("<b",v[:1])[0]
         if t in ("u8","bool") and len(v)>=1: return t, v[0]
     except Exception:
         pass
