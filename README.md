@@ -70,11 +70,22 @@ frame = seqId (uint16 LE) + opcode (uint8) + payload
 | reply | `8dc5ec05-…` | notify (command replies) |
 | event | `43312cd1-…` | notify (async events) |
 
-Opcodes: `0x00` getAccessSeed, `0x01` unlock, `0x02` getLimits, `0x10`
-readShort, `0x11` writeShort, `0x22` write, `0x03` ack/flow. A `readShort` reply
-is `seqId(2) + status(1, 0x00=OK) + value`. Device state is addressed as little
-filesystem-like paths (`/p/bat/soc`, `/p/app/htr/temp`, …); the type registry in
-the script maps the ones I've identified.
+LORAX is a small **file-access protocol** — the paths are files, and
+`readShort` / `writeShort` are shorthand for open+read / open+write+close. The
+full opcode set:
+
+| group | opcodes |
+|---|---|
+| auth / session | `0x00` getAccessSeed · `0x01` unlockAccess · `0x02` getLimits · `0x03` ackEvents |
+| shorthand | `0x10` readShort · `0x11` writeShort · `0x12` statShort · `0x13` unlink |
+| file handles | `0x20` fileOpen · `0x21` fileRead · `0x22` fileWrite · `0x23` fileWatch · `0x24` fileUnwatch · `0x25` fileStat · `0x26` fileClose · `0x27` pruneFileHandles |
+
+A reply is `seqId(2) + status(1, 0x00=OK) + data`. Payloads:
+`readShort = offset(u16) maxLen(u16) path`;
+`writeShort = offset(u16) flags(u8) path 0x00 data` (flags: truncate = `0x04`).
+Device state is addressed as filesystem-like paths (`/p/bat/soc`,
+`/p/app/htr/temp`, …); the type registry in the script maps the ones I've
+identified.
 
 ## Credit
 
@@ -85,6 +96,10 @@ UUIDs and the path model match
 documents the *older* one-characteristic-per-field firmware — a different GATT
 layout and a different handshake constant — but the same
 `SHA-256(secret ++ seed)[:16]` auth scheme carried over to LORAX.
+
+The full opcode set (LORAX is a file-access protocol) and the
+`readShort`/`writeShort` payload layouts were recovered from Puffco Connect
+3.13.47 while building my own Puffco Pro control webapp, and folded back in here.
 
 ## Status / work in progress
 
@@ -101,7 +116,9 @@ this is the early, exploratory version of that for LORAX.
 
 What's mapped so far:
 
-- The frame format, the command/reply/event channels, and the main opcodes.
+- The frame format, the command/reply/event channels, and the **full opcode set**
+  — LORAX is a file-access protocol (open/read/write/watch/stat/close), with
+  `readShort`/`writeShort` as the shorthand ops.
 - The New Proxy auth handshake, confirmed against a real capture.
 - A chunk of the `/p` and `/u` path tree with types (battery, heater, odometer,
   profiles, lantern, LEDs, device info).
@@ -109,7 +126,9 @@ What's mapped so far:
 Still open, and where help is useful:
 
 - More of the path tree, and which paths are writable vs read-only.
-- The larger write opcodes (`0x20` / `0x22` / `0x23`) and their payload shapes.
+- Which **writeShort** paths and values actually drive the device (set temp,
+  start / abort a heat cycle) — the opcode and framing are known; the control
+  *paths* are the remaining piece.
 - The event channel (`43312cd1-…`): what the device pushes unprompted.
 - Whether paths/opcodes drift across firmware versions.
 - Nailing down the control surface enough to safely *write* (set temp, trigger a

@@ -14,20 +14,31 @@ Outputs (stdout + optional files):
   * Every readShort path with its value auto-decoded by type
   * Every control command (writeShort/write) with decoded written value
 
-Protocol (confirmed against captures + austenstone/puffco-mcp / Fr0st3h writeup):
+Protocol (confirmed against captures + austenstone/puffco-mcp and the LORAX
+transport recovered from Puffco Connect 3.13.47 for magikh0e's Puffco Pro
+control webapp):
   frame = seqId(uint16 LE) + opcode(uint8) + payload
-  write char  -> ATT handle for the 60133d5c-... characteristic
-  notify char -> 8dc5ec05-... (acks/events) and 43312cd1-... (bulk replies)
-  readShort reply = seqId(2) + status(1, 0x00=OK) + value
-Opcodes: 0x00 getAccessSeed, 0x01 unlock, 0x02 getLimits,
-         0x10 readShort, 0x11 writeShort, 0x22 write, 0x03 ack/flow
+  reply = seqId(uint16 LE) + status(uint8, 0x00=OK) + data
+  write char  -> 60133d5c-...  (write-without-response)
+  notify char -> 8dc5ec05-...  (replies) and 43312cd1-... (async events)
+
+LORAX is a small file-access protocol -- the /p and /u paths are files, and
+readShort/writeShort are shorthand for open+read / open+write+close. Opcodes:
+  0x00 getAccessSeed  0x01 unlockAccess  0x02 getLimits  0x03 ackEvents
+  0x10 readShort      0x11 writeShort    0x12 statShort  0x13 unlink
+  0x20 fileOpen       0x21 fileRead      0x22 fileWrite  0x23 fileWatch
+  0x24 fileUnwatch    0x25 fileStat      0x26 fileClose  0x27 pruneFileHandles
+Payloads:
+  readShort  = offset(u16 LE) maxLen(u16 LE) path
+  writeShort = offset(u16 LE) flags(u8) path 0x00 data      (flags: truncate=0x04)
 """
 import struct, re, sys, csv, json, argparse
 from collections import Counter
 
-OPS = {0x00:"getAccessSeed",0x01:"unlock",0x02:"getLimits",
-       0x03:"ack/flow",0x10:"readShort",0x11:"writeShort",0x22:"write",
-       0x20:"op20",0x23:"op23",0x27:"op27"}
+OPS = {0x00:"getAccessSeed",0x01:"unlockAccess",0x02:"getLimits",0x03:"ackEvents",
+       0x10:"readShort",0x11:"writeShort",0x12:"statShort",0x13:"unlink",
+       0x20:"fileOpen",0x21:"fileRead",0x22:"fileWrite",0x23:"fileWatch",
+       0x24:"fileUnwatch",0x25:"fileStat",0x26:"fileClose",0x27:"pruneFileHandles"}
 
 # --- Confirmed LORAX GATT UUIDs (from austenstone/puffco-mcp, live-verified) ---
 UUID = {
